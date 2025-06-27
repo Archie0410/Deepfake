@@ -1,5 +1,3 @@
-# main.py
-
 import pandas as pd
 import os
 from sklearn.model_selection import train_test_split
@@ -9,26 +7,33 @@ import xgboost as xgb
 import joblib
 
 # 1. Load Dataset
-def load_data(path='data/smart_detailed_ehr.csv'):
+def load_data(path='data/smart_adr_dataset.csv'):
     return pd.read_csv(path)
 
 # 2. Preprocess Data
 def preprocess(df):
     df = df.copy()
 
-    # Initialize encoders for categorical columns
-    encoders = {
-        'gender': LabelEncoder(),
-        'drug': LabelEncoder(),
-        'genomics': LabelEncoder(),
-        'past_diseases': LabelEncoder()
-    }
+    # Label encode the target column
+    target_encoder = LabelEncoder()
+    df['adr_severity_encoded'] = target_encoder.fit_transform(df['adr_severity'])
 
-    for col, encoder in encoders.items():
-        df[col] = encoder.fit_transform(df[col])
+    # Categorical features to encode
+    categorical_cols = [
+        'gender', 'drug', 'genomics', 'past_diseases',
+        'reason_for_drug', 'allergies', 'addiction',
+        'ayurvedic_medicine', 'hereditary_disease', 'age_group'
+    ]
 
-    X = df.drop('adr_label', axis=1)
-    y = df['adr_label']
+    encoders = {'adr_severity': target_encoder}  # Store target encoder
+
+    for col in categorical_cols:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+        encoders[col] = le
+
+    X = df.drop(columns=['adr_severity', 'adr_severity_encoded'])
+    y = df['adr_severity_encoded']
     return X, y, encoders
 
 # 3. Train Model
@@ -78,5 +83,6 @@ def main():
     print("Accuracy:", accuracy_score(y_test, y_pred))
     print(classification_report(y_test, y_pred))
 
+# Entry point
 if __name__ == "__main__":
     main()
